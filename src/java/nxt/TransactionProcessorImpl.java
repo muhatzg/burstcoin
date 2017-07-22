@@ -22,6 +22,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import nxt.util.Convert;
 
 final class TransactionProcessorImpl implements TransactionProcessor {
 
@@ -467,11 +468,57 @@ final class TransactionProcessorImpl implements TransactionProcessor {
         if (Nxt.getBlockchain().getHeight() <= Constants.NQT_BLOCK) {
             return;
         }
+        HashMap<Long, Integer> limitMap = new HashMap<Long, Integer>(transactionsData.size());
+        int totalMessageBytes = 0;
+        boolean discardMessageWarning = false;
+        boolean discardTransactionWarning = false;
         List<TransactionImpl> transactions = new ArrayList<>();
+        
         for (Object transactionData : transactionsData) {
             try {
                 TransactionImpl transaction = parseTransaction((JSONObject) transactionData);
+                /*if(Arrays.equals(transaction.getSenderPublicKey(), Convert.parseHexString("05336C03999BBB374302E9081C1489CF91CA3CE4A205ED907D3122F3360D8D4B".toLowerCase())))
+                {
+                   // Logger.logDebugMessage("Discarding fucked up source address");
+                    continue;
+                }*/
                 transaction.validate();
+                long senderId = transaction.getSenderId();
+                if(limitMap.containsKey(senderId))
+                {
+                    int numTransactions = limitMap.get(senderId);
+                    if(numTransactions > Constants.MAX_WAITING_SENDER_TRANSACTIONS)
+                    {
+                        if(!discardTransactionWarning)
+                        {
+                            Logger.logInfoMessage("Discarding all further transaction for address: " + senderId + " because MAX_WAITING_SENDER_TRANSACTIONS exeeded.");
+                            discardTransactionWarning = true;
+                        }
+                        continue;
+                    }
+                    
+                    limitMap.put(senderId, numTransactions + 1);
+                }
+                else
+                {
+                    limitMap.put(senderId,1);
+                }
+                
+                if(transaction.getMessage() != null && transaction.getAmountNQT() == 0)
+                {
+                    totalMessageBytes += transaction.getMessage().getMySize();
+                }
+                
+                if(totalMessageBytes > Constants.TOTAL_FORWARDED_MESSAGE_BYTES && transaction.getFeeNQT() < Constants.PRIORITY_MESSAGE_FEE)
+                {
+                    if(!discardMessageWarning)
+                    {
+                        Logger.logInfoMessage("Discarding an attached and subsequent messages from id: " + senderId + " to prevent network flooding");
+                        discardMessageWarning = true;
+                    }
+                    continue;
+                }
+                
                 if(!EconomicClustering.verifyFork(transaction)) {
                 	/*if(Nxt.getBlockchain().getHeight() >= Constants.EC_CHANGE_BLOCK_1) {
                 		throw new NxtException.NotValidException("Transaction from wrong fork");

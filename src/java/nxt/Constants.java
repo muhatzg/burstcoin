@@ -117,6 +117,13 @@ public final class Constants {
 
     public static final int EC_BLOCK_DISTANCE_LIMIT = 60;
     public static final int EC_CHANGE_BLOCK_1 = 67000;
+    
+    //DDoS protection agains message flooding
+    public static final int TOTAL_FORWARDED_MESSAGE_BYTES = 256 * 1024;
+    //If the sender is willing to pay an extra fee, his message will not be blocked
+    public static final int PRIORITY_MESSAGE_FEE = 50;
+    //Prevents a single address from spaming too many transaction messages onto the network
+    public static final int MAX_WAITING_SENDER_TRANSACTIONS = 200;
 	
 
     private Constants() {} // never
