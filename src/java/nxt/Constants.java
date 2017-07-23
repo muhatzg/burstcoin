@@ -124,7 +124,7 @@ public final class Constants {
     public static final int PRIORITY_MESSAGE_FEE = 50;
     //Prevents a single address from spaming too many transaction messages onto the network
     public static final int MAX_SENDER_MESSEGAE_BYTES = 10 * 1024;
-    public static final int NUM_UNCONFIRMED_TRANSACTIONS_INVESTIGATE = 1000;
+    public static final int NUM_UNCONFIRMED_TRANSACTIONS_INVESTIGATE = 200;
     public static final int BLOCK_MAX_MESSAGE_PAYLOAD = 20 * 1024;
     public static final int BLOCK_MAX_SENDER_MESSAGE_PAYLOAD = 10 * 1024;
     public static final int BLOCK_MAX_MESSAGES = 20;

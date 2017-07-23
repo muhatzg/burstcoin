@@ -160,7 +160,8 @@ final class TransactionProcessorImpl implements TransactionProcessor {
                         
                         if(numTransactions > Constants.NUM_UNCONFIRMED_TRANSACTIONS_INVESTIGATE) //Something fishy seems to be happening. Investigate
                         {
-                            List<TransactionImpl> discardedTransactions = DDosProtection.sanitizeTransactionList(unconfirmedTransactions, "removeUnconfirmedTransactionsThread");
+                            //TODO: Cleanup transaction interface/ transactionimpl usage
+                            List<TransactionImpl> discardedTransactions = (List<TransactionImpl>)DDosProtection.sanitizeTransactionList(unconfirmedTransactions, "removeUnconfirmedTransactionsThread");
                             
                             if(discardedTransactions.size() > 0)
                             {
@@ -214,7 +215,7 @@ final class TransactionProcessorImpl implements TransactionProcessor {
                             transactionList.add(transaction);
                         }
                     }
-
+                    DDosProtection.sanitizeTransactionList(transactionList, "Transaction rebroadcaster");
                     if (transactionList.size() > 0) {
                         Peers.rebroadcastTransactions(transactionList);
                     }

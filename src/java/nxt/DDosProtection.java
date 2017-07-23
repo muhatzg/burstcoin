@@ -20,15 +20,15 @@ import nxt.util.Logger;
  * @author rainman
  */
 public class DDosProtection {
-    public static List<TransactionImpl> sanitizeTransactionList(Collection<TransactionImpl> transactionList)
+    public static List<? extends Transaction> sanitizeTransactionList(Collection<? extends Transaction> transactionList)
     {
         return sanitizeTransactionList(transactionList, "Unknown");
     }
     
-    public static List<TransactionImpl> sanitizeTransactionList(Collection<TransactionImpl> transactionList, String actor)
+    public static List<? extends Transaction> sanitizeTransactionList(Collection<? extends Transaction> transactionList, String actor)
     {
         int numTransactions = transactionList.size();
-        List<TransactionImpl> discardedTransactions = new ArrayList<>();
+        List<Transaction> discardedTransactions = new ArrayList<>();
 
         if(numTransactions > Constants.NUM_UNCONFIRMED_TRANSACTIONS_INVESTIGATE) //Something fishy seems to be happening. Investigate
         {
@@ -37,9 +37,9 @@ public class DDosProtection {
             boolean discardGlobalMessageWarning = false;
             boolean discardIndividualMessageWarning = false;
             
-            for(Iterator<TransactionImpl> transactionIterator = transactionList.iterator(); transactionIterator.hasNext();)
+            for(Iterator<? extends Transaction> transactionIterator = transactionList.iterator(); transactionIterator.hasNext();)
             {
-                TransactionImpl transaction = transactionIterator.next();
+                Transaction transaction = transactionIterator.next();
                 long senderId = transaction.getSenderId();
                 if(transaction.getMessage() != null && transaction.getAmountNQT() == 0 && limitMap.containsKey(senderId))
                 {

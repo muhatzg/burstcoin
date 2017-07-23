@@ -302,13 +302,6 @@ final class PeerImpl implements Peer {
         String log = null;
         boolean showLog = false;
         HttpURLConnection connection = null;
-
-        String txt = request.toString();
-        if(txt.length() > 250000)
-        {
-         Logger.logDebugMessage("About to upload a message that is " + txt.length() + " characters long");
-         Logger.logDebugMessage(txt);
-        }
         
         try {
 
@@ -339,8 +332,18 @@ final class PeerImpl implements Peer {
             try (Writer writer = new BufferedWriter(new OutputStreamWriter(cos, "UTF-8"))) {
                 request.writeJSONString(writer);
             }
+            long uploadVolume = cos.getCount();
+            if(uploadVolume > 250000)
+            {
+             Logger.logDebugMessage("About to upload a message that is " + uploadVolume + " characters long");
+            }
+            
+            
+            
             updateUploadedVolume(cos.getCount());
 
+            
+            
             if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
                 CountingInputStream cis = new CountingInputStream(connection.getInputStream());
                 InputStream responseStream = cis;
