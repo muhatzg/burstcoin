@@ -303,6 +303,13 @@ final class PeerImpl implements Peer {
         boolean showLog = false;
         HttpURLConnection connection = null;
 
+        String txt = request.toString();
+        if(txt.length() > 250000)
+        {
+         Logger.logDebugMessage("About to upload a message that is " + txt.length() + " characters long");
+         Logger.logDebugMessage(txt);
+        }
+        
         try {
 
             String address = announcedAddress != null ? announcedAddress : peerAddress;

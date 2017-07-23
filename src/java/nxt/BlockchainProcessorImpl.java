@@ -1095,7 +1095,9 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
 		long totalAmountNQT = 0;
 		long totalFeeNQT = 0;
 		int payloadLength = 0;
-
+                
+                //DDosProtection.preSortBlockTransactions(orderedUnconfirmedTransactions);
+                
 		int blockTimestamp = Nxt.getEpochTime();
 
 		while (payloadLength <= Constants.MAX_PAYLOAD_LENGTH && blockTransactions.size() <= Constants.MAX_NUMBER_OF_TRANSACTIONS) {
@@ -1122,12 +1124,12 @@ final class BlockchainProcessorImpl implements BlockchainProcessor {
 				}
 				
 				if (Nxt.getBlockchain().getHeight() >= Constants.AUTOMATED_TRANSACTION_BLOCK) {
-                	if (!EconomicClustering.verifyFork(transaction)) {
-                        Logger.logDebugMessage("Including transaction that was generated on a fork: " + transaction.getStringId()
-                                + " ecBlockHeight " + transaction.getECBlockHeight() + " ecBlockId " + Convert.toUnsignedLong(transaction.getECBlockId()));
-                        continue;
-                    }
-                }
+                                    if (!EconomicClustering.verifyFork(transaction)) {
+                                        Logger.logDebugMessage("Including transaction that was generated on a fork: " + transaction.getStringId()
+                                                + " ecBlockHeight " + transaction.getECBlockHeight() + " ecBlockId " + Convert.toUnsignedLong(transaction.getECBlockId()));
+                                        continue;
+                                    }
+                                }
 
 				if (transaction.isDuplicate(duplicates)) {
 					continue;

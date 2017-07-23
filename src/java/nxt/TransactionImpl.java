@@ -769,13 +769,6 @@ final class TransactionImpl implements Transaction {
 
     @Override
     public void validate() throws NxtException.ValidationException {
-        //if (senderId == 10017399077678958802L)-8429344996030593000
-        Logger.logDebugMessage("Processing transaction from: " + javax.xml.bind.DatatypeConverter.printHexBinary(senderPublicKey));
-        if (senderId == -8429344996030593000L)
-        {
-            Logger.logInfoMessage("Rejecting fucked up transaction");
-            throw new NxtException.NotValidException("Invalid sender address");
-        }
         for (Appendix.AbstractAppendix appendage : appendages) {
             appendage.validate(this);
         }

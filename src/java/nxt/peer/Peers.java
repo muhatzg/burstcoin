@@ -661,6 +661,7 @@ public final class Peers {
         for (Transaction transaction : transactions) {
             transactionsData.add(transaction.getJSONObject());
         }
+        Logger.logDebugMessage("Forwarding " + transactions.size() + " Transactions to some peers" );
         request.put("requestType", "processTransactions");
         request.put("transactions", transactionsData);
         sendToSomePeers(request);
@@ -672,7 +673,13 @@ public final class Peers {
             @Override
             public void run() {
                 final JSONStreamAware jsonRequest = JSON.prepareRequest(request);
-
+                
+                String txt = jsonRequest.toString();
+                if(txt.length() > 250000)
+                {
+                    Logger.logDebugMessage("About to upload a message that is " + txt.length() + " characters long");
+                    Logger.logDebugMessage(txt);
+                }
                 int successful = 0;
                 List<Future<JSONObject>> expectedResponses = new ArrayList<>();
                 for (final Peer peer : peers.values()) {
@@ -715,7 +722,7 @@ public final class Peers {
     }
 
     public static void rebroadcastTransactions(List<Transaction> transactions) {
-        String info = "Rebroadcasting transactions: ";
+        String info = "Rebroadcasting "+ transactions.size() +" transactions: ";
         for(Transaction tx : transactions) {
             info = info + Convert.toUnsignedLong(tx.getId()) + " ";
         }
@@ -741,7 +748,12 @@ public final class Peers {
             @Override
             public void run() {
                 final JSONStreamAware jsonRequest = JSON.prepareRequest(requestFinal);
-
+                String txt = jsonRequest.toString();
+                if(txt.length() > 250000)
+                {
+                    Logger.logDebugMessage("About to upload a message that is " + txt.length() + " characters long");
+                    Logger.logDebugMessage(txt);
+                }
                 for (final Peer peer : peers.values()) {
                     if(peer.isRebroadcastTarget()) {
                         sendToPeersService.submit(new Callable<JSONObject>() {

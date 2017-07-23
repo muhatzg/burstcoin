@@ -147,8 +147,46 @@ final class TransactionProcessorImpl implements TransactionProcessor {
                             }
                         } // synchronized
                     }
+                    
+                    //DDoS protection against message spam
+                    List<TransactionImpl> unconfirmedTransactions = new ArrayList<>();
+                   
+                    try (DbIterator<TransactionImpl> iterator = unconfirmedTransactionTable.getAll(0, -1, "ORDER BY timestamp desc")) {
+                        while (iterator.hasNext()) {
+                            unconfirmedTransactions.add(iterator.next());
+                        }
+                        
+                        int numTransactions = unconfirmedTransactions.size();
+                        
+                        if(numTransactions > Constants.NUM_UNCONFIRMED_TRANSACTIONS_INVESTIGATE) //Something fishy seems to be happening. Investigate
+                        {
+                            List<TransactionImpl> discardedTransactions = DDosProtection.sanitizeTransactionList(unconfirmedTransactions, "removeUnconfirmedTransactionsThread");
+                            
+                            if(discardedTransactions.size() > 0)
+                            {
+                                Logger.logInfoMessage("Purging a total of " + discardedTransactions.size() + " message transactions from database");
+                                synchronized (BlockchainImpl.getInstance()) {
+                                    try {
+                                        Db.beginTransaction();
+                                        for (TransactionImpl transaction : discardedTransactions) {
+                                            removeUnconfirmedTransaction(transaction);
+                                        }
+                                        Account.flushAccountTable();
+                                        Db.commitTransaction();
+                                    } catch (Exception e) {
+                                        Logger.logErrorMessage(e.toString(), e);
+                                        Db.rollbackTransaction();
+                                        throw e;
+                                    } finally {
+                                        Db.endTransaction();
+                                    }
+                                } // synchronized                                    
+                            }
+                        }
+                    }                    
+                    
                 } catch (Exception e) {
-                    Logger.logDebugMessage("Error removing unconfirmed transactions", e);
+                    Logger.logInfoMessage("Error removing unconfirmed transactions", e);
                 }
             } catch (Throwable t) {
                 Logger.logMessage("CRITICAL ERROR. PLEASE REPORT TO THE DEVELOPERS.\n" + t.toString());
@@ -470,55 +508,15 @@ final class TransactionProcessorImpl implements TransactionProcessor {
         }
         HashMap<Long, Integer> limitMap = new HashMap<Long, Integer>(transactionsData.size());
         int totalMessageBytes = 0;
-        boolean discardMessageWarning = false;
-        boolean discardTransactionWarning = false;
+        boolean discardGlobalMessageWarning = false;
+        boolean discardIndividualMessageWarning = false;
         List<TransactionImpl> transactions = new ArrayList<>();
         
         for (Object transactionData : transactionsData) {
             try {
                 TransactionImpl transaction = parseTransaction((JSONObject) transactionData);
-                /*if(Arrays.equals(transaction.getSenderPublicKey(), Convert.parseHexString("05336C03999BBB374302E9081C1489CF91CA3CE4A205ED907D3122F3360D8D4B".toLowerCase())))
-                {
-                   // Logger.logDebugMessage("Discarding fucked up source address");
-                    continue;
-                }*/
                 transaction.validate();
-                long senderId = transaction.getSenderId();
-                if(limitMap.containsKey(senderId))
-                {
-                    int numTransactions = limitMap.get(senderId);
-                    if(numTransactions > Constants.MAX_WAITING_SENDER_TRANSACTIONS)
-                    {
-                        if(!discardTransactionWarning)
-                        {
-                            Logger.logInfoMessage("Discarding all further transaction for address: " + senderId + " because MAX_WAITING_SENDER_TRANSACTIONS exeeded.");
-                            discardTransactionWarning = true;
-                        }
-                        continue;
-                    }
-                    
-                    limitMap.put(senderId, numTransactions + 1);
-                }
-                else
-                {
-                    limitMap.put(senderId,1);
-                }
-                
-                if(transaction.getMessage() != null && transaction.getAmountNQT() == 0)
-                {
-                    totalMessageBytes += transaction.getMessage().getMySize();
-                }
-                
-                if(totalMessageBytes > Constants.TOTAL_FORWARDED_MESSAGE_BYTES && transaction.getFeeNQT() < Constants.PRIORITY_MESSAGE_FEE)
-                {
-                    if(!discardMessageWarning)
-                    {
-                        Logger.logInfoMessage("Discarding an attached and subsequent messages from id: " + senderId + " to prevent network flooding");
-                        discardMessageWarning = true;
-                    }
-                    continue;
-                }
-                
+  
                 if(!EconomicClustering.verifyFork(transaction)) {
                 	/*if(Nxt.getBlockchain().getHeight() >= Constants.EC_CHANGE_BLOCK_1) {
                 		throw new NxtException.NotValidException("Transaction from wrong fork");
@@ -540,6 +538,9 @@ final class TransactionProcessorImpl implements TransactionProcessor {
         if (transactions.isEmpty()) {
             return Collections.emptyList();
         }
+
+        DDosProtection.sanitizeTransactionList(transactions, "processTransactions");
+
         List<Transaction> sendToPeersTransactions = new ArrayList<>();
         List<Transaction> addedUnconfirmedTransactions = new ArrayList<>();
         List<Transaction> addedDoubleSpendingTransactions = new ArrayList<>();
